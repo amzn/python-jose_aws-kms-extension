@@ -1,15 +1,19 @@
-Jose-Python_AWS-KMS-Extension
-=======================
+.. Jose-Python_AWS-KMS-Extension documentation master file, created by
+   sphinx-quickstart on Mon Jun  5 07:30:25 2023.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
 
-Please replace this text with a short description of your package.
+Welcome to Jose-Python_AWS-KMS-Extension's documentation!
+=========================================================
 
 .. toctree::
+   :maxdepth: 2
+   :caption: Contents:
 
-   _apidoc/modules
 
 
 Indices and tables
-__________________
+==================
 
 * :ref:`genindex`
 * :ref:`modindex`
