@@ -3,3 +3,4 @@ Imports in this module create cache so that monkey-patching 'python-jose' object
 """
 from . import constants  # noqa: F401
 from . import jwk  # noqa: F401
+from . import jwe  # noqa: F401

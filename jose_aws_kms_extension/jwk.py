@@ -3,7 +3,9 @@ from typing import Optional, Type
 from jose import jwk as jose_jwk
 from jose.backends.base import Key
 from jose.constants import ALGORITHMS
-from jose.jwk import get_key
+from jose.jwk import get_key as jose_jwk_get_key
+
+from jose_aws_kms_extension.backends.kms.symmetric.encryption import BotoKmsSymmetricEncryptionKey
 
 
 def _get_key(algorithm: str) -> Optional[Type[Key]]:
@@ -17,8 +19,10 @@ def _get_key(algorithm: str) -> Optional[Type[Key]]:
         from jose_aws_kms_extension.backends.kms.asymmetric.signing import BotoKmsAsymmetricSigningKey
 
         return BotoKmsAsymmetricSigningKey
+    elif algorithm == ALGORITHMS.SYMMETRIC_DEFAULT:
+        return BotoKmsSymmetricEncryptionKey
     else:
-        return get_key(algorithm)
+        return jose_jwk_get_key(algorithm)
 
 
 # monkey patching jose.jwk.get_key
