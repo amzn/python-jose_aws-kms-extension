@@ -100,9 +100,25 @@ class BotoKmsSymmetricEncryptionKey(KmsSymmetricEncryptionKey):
                 GrantTokens=grant_tokens or [],
             )
         except Exception as exc:
+            # TODO: Do granular exception handling, when granular JWE exceptions are added.
             raise JWEError("Exception was thrown while generating data-key.") from exc
+        else:
+            return data_key_response["Plaintext"], data_key_response["CiphertextBlob"]
 
-        return data_key_response["Plaintext"], data_key_response["CiphertextBlob"]
+    def unwrap_key(self, wrapped_key: bytes) -> bytes:
+        """
+        See :func:`~jose.backends.base.Key.unwrap_key`.
+        """
+        try:
+            decryption_response = self._kms_client.decrypt(
+                CiphertextBlob=wrapped_key,
+                KeyId=self._key,
+                EncryptionAlgorithm=self._algorithm)  # type: ignore[arg-type]
+        except Exception as exc:
+            # TODO: Do granular exception handling, when granular JWE exceptions are added.
+            raise JWEError('Exception was thrown while decryption.') from exc
+        else:
+            return decryption_response['Plaintext']
 
     @staticmethod
     def _get_key_spec(enc: str) -> DataKeySpecType:

@@ -1,3 +1,4 @@
+import re
 from typing import Mapping, Sequence
 from unittest import mock
 from unittest.mock import MagicMock
@@ -51,6 +52,11 @@ def encryption_context() -> Mapping[str, str]:
 @pytest.fixture
 def grant_tokens() -> Sequence[str]:
     return ['token1', 'token2']
+
+
+@pytest.fixture
+def wrapped_key() -> bytes:
+    return b'test wrapped_key'
 
 
 def test_generate_data_key__with_unsupported_alg__should_throw_error(
@@ -113,3 +119,24 @@ def test_generate_data_key__with_valid_enc_and_optional_arguments__should_return
     mock_kms_client.generate_data_key.assert_called_with(
         KeyId=valid_key, KeySpec=_DATA_KEY_SPECS.AES_256, EncryptionContext=encryption_context,
         GrantTokens=grant_tokens)
+
+
+def test_unwrap_key__with_exception_from_kms__should_throw_exception(
+    boto_kms_symmetric_encryption_key: BotoKmsSymmetricEncryptionKey, mock_kms_client: MagicMock, wrapped_key: bytes
+) -> None:
+    mock_kms_client.decrypt.side_effect = Exception("test exception")
+
+    with pytest.raises(JWEError, match=re.escape('Exception was thrown while decryption.')) as exc_info:
+        boto_kms_symmetric_encryption_key.unwrap_key(wrapped_key=wrapped_key)
+
+    assert exc_info.value.__cause__ is mock_kms_client.decrypt.side_effect
+
+
+def test_unwrap_key__with_response_from_kms__should_return_decrypted_data(
+    boto_kms_symmetric_encryption_key: BotoKmsSymmetricEncryptionKey, mock_kms_client: MagicMock, wrapped_key: bytes
+) -> None:
+    mock_kms_client.decrypt.return_value = {"Plaintext": "test decrypted data"}
+
+    decrypted_data = boto_kms_symmetric_encryption_key.unwrap_key(wrapped_key=wrapped_key)
+
+    assert decrypted_data == mock_kms_client.decrypt.return_value["Plaintext"]
