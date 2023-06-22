@@ -1,7 +1,7 @@
 # Jose-Python_AWS-KMS-Extension
 
-This library package is an extension of jwcrypto library. It provides JWE based encrypters/decrypters and JWS based signers/verifiers 
-for doing operations with cryptographic keys stores in AWS KMS. This library requires Python 3.6 or above.
+This library package is an extension of [python-jose](https://pypi.org/project/python-jose/) library. It provides JWE based encrypters/decrypters and JWS based signers/verifiers 
+for doing operations with cryptographic keys stores in AWS KMS. This library requires Python 3.8 or above.
 
 ## Building the Project
 This project uses [pyproject.toml](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/), 
