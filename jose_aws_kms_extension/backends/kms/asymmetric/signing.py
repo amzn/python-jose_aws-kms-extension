@@ -7,7 +7,7 @@ from jose.backends.base import Key
 from jose.constants import ALGORITHMS
 from jose.exceptions import JWSAlgorithmError, JWSError
 from mypy_boto3_kms.client import KMSClient
-from mypy_boto3_kms.type_defs import SignResponseTypeDef
+from mypy_boto3_kms.type_defs import SignResponseTypeDef, VerifyResponseTypeDef
 
 _MESSAGE_TYPE = SimpleNamespace(
     RAW='RAW',
@@ -41,21 +41,12 @@ class KmsAsymmetricSigningKey(abc.ABC, Key):
         self._key = key
         self._algorithm = algorithm
 
-    @abc.abstractmethod
-    def sign(self, signing_input: bytes) -> bytes:
-        """
-        Method for performing cryptographic signing using key stored in AWS KMS.
-        :param signing_input: Input bytes to be signed.
-        :return: Generated Signature bytes.
-        """
-
 
 class BotoKmsAsymmetricSigningKey(KmsAsymmetricSigningKey):
     """
     Class representing an AWS KMS Asymmetric key, that uses Boto KMS Client for signing.
     """
 
-    _message_type: str
     _kms_client: KMSClient
 
     def __init__(self, key: str, algorithm: str, kms_client: Optional[KMSClient] = None):
@@ -67,34 +58,49 @@ class BotoKmsAsymmetricSigningKey(KmsAsymmetricSigningKey):
         super().__init__(key, algorithm)
 
         # TODO: Take a factory input to allow clients have custom configurations.
-        self._message_type = _MESSAGE_TYPE.DIGEST
         self._kms_client = kms_client or boto3.client("kms")
 
-    def sign(self, signing_input: bytes) -> bytes:
+    def sign(self, msg: bytes) -> bytes:
         """
-        See :func:`~jose_aws_kms_extension.backends.kms.KmsAsymmetricSigningKey.sign`.
+        See :func:`~jose.backends.base.Key.sign`.
         """
 
-        message = self._get_message(signing_input)
+        message = self._get_message(msg)
         try:
             res: SignResponseTypeDef = self._kms_client.sign(
                 KeyId=self._key,
                 Message=message,
-                MessageType=self._message_type,  # type: ignore[arg-type]
+                MessageType=_MESSAGE_TYPE.DIGEST,
                 SigningAlgorithm=self._algorithm,  # type: ignore[arg-type]
             )
         except Exception as exc:
             # TODO: Have granular level of exception handling to put more meaningful context.
-            raise JWSError(f"An exception was thrown from KMS: {exc}")
+            raise JWSError("An exception was thrown from KMS.") from exc
 
         return res["Signature"]
 
-    def _get_message(self, signing_input: bytes) -> bytes:
-        message: bytes = signing_input
-        if self._message_type == _MESSAGE_TYPE.DIGEST:
-            try:
-                message_digest_provider: Callable = ALGORITHMS.HASHES[self._algorithm]
-            except KeyError:
-                raise JWSError(f"Provided algorithm: {self._algorithm}, doesn't support message digesting.")
-            message = message_digest_provider(message).digest()
-        return message
+    def verify(self, msg: bytes, sig: bytes) -> bool:
+        """
+        See :func:`~jose.backends.base.Key.verify`.
+        """
+
+        message = self._get_message(msg)
+        try:
+            verify_result: VerifyResponseTypeDef = self._kms_client.verify(
+                KeyId=self._key,
+                Message=message,
+                MessageType=_MESSAGE_TYPE.DIGEST,
+                Signature=sig,
+                SigningAlgorithm=self._algorithm,  # type: ignore[arg-type]
+            )
+        except Exception as exc:
+            # TODO: Have granular level of exception handling to put more meaningful context.
+            raise JWSError("An exception was thrown from KMS.") from exc
+        return verify_result["SignatureValid"]
+
+    def _get_message(self, msg: bytes) -> bytes:
+        try:
+            message_digest_provider: Callable = ALGORITHMS.HASHES[self._algorithm]
+        except KeyError:
+            raise JWSError(f"Provided algorithm: {self._algorithm}, doesn't support message digesting.")
+        return message_digest_provider(msg).digest()

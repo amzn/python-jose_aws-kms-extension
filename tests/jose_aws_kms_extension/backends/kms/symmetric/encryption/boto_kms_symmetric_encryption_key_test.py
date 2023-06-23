@@ -1,6 +1,5 @@
 import re
 from typing import Mapping, Sequence
-from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -29,7 +28,7 @@ def unsupported_algorithm() -> str:
 
 @pytest.fixture
 def boto_kms_symmetric_encryption_key(
-    valid_key: str, valid_algorithm: str, mock_kms_client: mock.MagicMock
+    valid_key: str, valid_algorithm: str, mock_kms_client: MagicMock
 ) -> BotoKmsSymmetricEncryptionKey:
     return BotoKmsSymmetricEncryptionKey(key=valid_key, algorithm=valid_algorithm, kms_client=mock_kms_client)
 
@@ -60,7 +59,7 @@ def wrapped_key() -> bytes:
 
 
 def test_generate_data_key__with_unsupported_alg__should_throw_error(
-    valid_key: str, unsupported_algorithm: str, mock_kms_client: mock.MagicMock
+    valid_key: str, unsupported_algorithm: str, mock_kms_client: MagicMock
 ) -> None:
     with pytest.raises(
         JWEAlgorithmUnsupportedError,
