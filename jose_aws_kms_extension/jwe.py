@@ -9,7 +9,7 @@ from jose_aws_kms_extension.backends.kms.symmetric.encryption import KmsSymmetri
 
 def _get_key_wrap_cek(enc: str, key: Key) -> Tuple[bytes, bytes]:
     """
-    Override of :func:`jose.jwe._get_key_wrap_cek` function, to allow AWS KMS related keys.
+    Override of :func:`~jose.jwe._get_key_wrap_cek` function, to allow AWS KMS related keys.
     :param enc: Encryption method encrypting content.
     :param key: Key for encrypting CEK.
     :return: Tuple of CEK bytes and wrapped/encrypted CEK bytes.

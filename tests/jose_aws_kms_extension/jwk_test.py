@@ -3,8 +3,9 @@ from unittest import mock
 
 import pytest
 from jose.backends import DIRKey
+from jose.backends.base import Key
 from jose.constants import ALGORITHMS
-from jose.jwk import get_key
+from jose.jwk import get_key, construct
 
 from jose_aws_kms_extension.backends.kms.asymmetric.signing import BotoKmsAsymmetricSigningKey
 from jose_aws_kms_extension.backends.kms.symmetric.encryption import BotoKmsSymmetricEncryptionKey
@@ -36,3 +37,25 @@ def test_get_key__with_another_algorithm__should_call_jose_jwk_get_key(mock_jose
     key_class = get_key(ALGORITHMS.DIR)
 
     assert key_class is mock_jose_jwk_get_key.return_value
+
+
+def test_construct__with_key_object__should_return_same_object() -> None:
+    input_key = mock.MagicMock(spec=Key)
+
+    output_key = construct(key_data=input_key)
+
+    assert output_key is input_key
+
+
+@mock.patch('jose_aws_kms_extension.jwk.jose_jwk_construct')
+def test_construct__with_non_key_object_key__should_call_jose_jwk_construct(
+    mock_jose_jwk_construct: mock.MagicMock
+) -> None:
+    mock_jose_jwk_construct.return_value = mock.MagicMock(spec=Key)
+    input_key = mock.MagicMock()
+    input_algorithm = mock.MagicMock()
+
+    output_key = construct(key_data=input_key, algorithm=input_algorithm)
+
+    mock_jose_jwk_construct.assert_called_once_with(key_data=input_key, algorithm=input_algorithm)
+    assert output_key is mock_jose_jwk_construct.return_value

@@ -1,6 +1,6 @@
 import abc
 from types import SimpleNamespace
-from typing import Callable, Optional
+from typing import Callable, Optional, Sequence
 
 import boto3
 from jose.backends.base import Key
@@ -8,6 +8,8 @@ from jose.constants import ALGORITHMS
 from jose.exceptions import JWSAlgorithmError, JWSError
 from mypy_boto3_kms.client import KMSClient
 from mypy_boto3_kms.type_defs import SignResponseTypeDef, VerifyResponseTypeDef
+
+from jose_aws_kms_extension.backends.kms import utils
 
 _MESSAGE_TYPE = SimpleNamespace(
     RAW='RAW',
@@ -23,23 +25,29 @@ class KmsAsymmetricSigningKey(abc.ABC, Key):
 
     _key: str
     _algorithm: str
+    _grant_tokens: Sequence[str]
 
-    def __init__(self, key: str, algorithm: str = ALGORITHMS.RSASSA_PSS_SHA_256):
+    def __init__(
+        self,
+        key: str,
+        algorithm: str,
+        grant_tokens: Optional[Sequence[str]] = None,
+    ):
         """
         :param key: AWS KMS Key ID (it can be a key ID, key ARN, key alias or key alias ARN)
         :param algorithm: Signing algorithm to be used with the key.
+        :param grant_tokens: A unique, nonsecret, variable-length, base64-encoded string that represents a grant.
         """
         if algorithm not in ALGORITHMS.KMS_ASYMMETRIC_SIGNING:
             raise JWSAlgorithmError(
                 f"{algorithm} is not part of supported KMS asymmetric algorithms: {ALGORITHMS.KMS_ASYMMETRIC_SIGNING}"
             )
-
-        if not isinstance(key, str):
-            raise JWSError(f"Expected a Key ID. Key provided: {key}, isn't supported by KMS.")
+        utils.validate_key_format(key)
 
         super().__init__(key=key, algorithm=algorithm)
         self._key = key
         self._algorithm = algorithm
+        self._grant_tokens = grant_tokens or []
 
 
 class BotoKmsAsymmetricSigningKey(KmsAsymmetricSigningKey):
@@ -49,13 +57,19 @@ class BotoKmsAsymmetricSigningKey(KmsAsymmetricSigningKey):
 
     _kms_client: KMSClient
 
-    def __init__(self, key: str, algorithm: str, kms_client: Optional[KMSClient] = None):
+    def __init__(
+        self,
+        key: str,
+        algorithm: str,
+        grant_tokens: Optional[Sequence[str]] = None,
+        kms_client: Optional[KMSClient] = None,
+    ):
         """
         See :func:`~jose_aws_kms_extension.backends.kms.KmsAsymmetricSigningKey.__init__`.
         :param kms_client: Boto KMS client to be used for all operations with the key.
         """
 
-        super().__init__(key, algorithm)
+        super().__init__(key, algorithm, grant_tokens)
 
         # TODO: Take a factory input to allow clients have custom configurations.
         self._kms_client = kms_client or boto3.client("kms")
@@ -72,6 +86,7 @@ class BotoKmsAsymmetricSigningKey(KmsAsymmetricSigningKey):
                 Message=message,
                 MessageType=_MESSAGE_TYPE.DIGEST,
                 SigningAlgorithm=self._algorithm,  # type: ignore[arg-type]
+                GrantTokens=self._grant_tokens,
             )
         except Exception as exc:
             # TODO: Have granular level of exception handling to put more meaningful context.

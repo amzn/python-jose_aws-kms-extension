@@ -36,6 +36,8 @@ mypy = "^1.3.0"
 pyproject-flake8 = "^5.0.4"
 # Poe the Poet (For enhancing Peotry capabilities)
 poethepoet = "^0.20.0"
+# IPython (Interactive Python shell)
+ipython = "^8.12"
 
 [tool.mypy]
 # See https://mypy.readthedocs.io/en/latest/config_file.html for more mypy options.

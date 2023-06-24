@@ -37,7 +37,7 @@ def test_get_key_wrap_cek__with_kms_symmetric_encryption_key__should_call_genera
 
     assert plaintext_cek is cek_tuple[0]
     assert encrypted_cek is cek_tuple[1]
-    mock_kms_symmetric_encryption_key.generate_data_key.assert_called_with(enc=enc)
+    mock_kms_symmetric_encryption_key.generate_data_key.assert_called_once_with(enc=enc)
 
 
 @mock.patch('jose_aws_kms_extension.jwe.jose_jwe_get_key_wrap_cek')
@@ -52,4 +52,4 @@ def test_get_key_wrap_cek__with_other_key_type__should_call_jose_jwe_get_key_wra
 
     assert plaintext_cek is cek_tuple[0]
     assert encrypted_cek is cek_tuple[1]
-    mock_jose_jwe_get_key_wrap_cek.assert_called_with(enc=enc, key=mock_other_key)
+    mock_jose_jwe_get_key_wrap_cek.assert_called_once_with(enc=enc, key=mock_other_key)

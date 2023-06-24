@@ -44,15 +44,12 @@ def sig() -> bytes:
     return b'test signature'
 
 
-def test_construct_boto_kms_asymmetric_signing_key__with_unsupported_key__should_throw_error(
-    unsupported_key: dict, valid_algorithm: str, mock_kms_client: MagicMock
+def test_construct__valid_arguments__should_call_validate_key_format(
+    valid_key: str, valid_algorithm: str, mock_kms_client: MagicMock, mock_validate_key_format: MagicMock
 ) -> None:
-    with pytest.raises(
-        JWSError,
-        match=f"Expected a Key ID. Key provided: {unsupported_key}, isn't supported by KMS."
-    ):
-        BotoKmsAsymmetricSigningKey(key=unsupported_key,  # type: ignore[arg-type]
-                                    algorithm=valid_algorithm, kms_client=mock_kms_client)
+    BotoKmsAsymmetricSigningKey(key=valid_key, algorithm=valid_algorithm, kms_client=mock_kms_client)
+
+    mock_validate_key_format.assert_called_once_with(valid_key)
 
 
 def test_construct_boto_kms_asymmetric_signing_key__with_unsupported_algorithm__should_throw_error(
