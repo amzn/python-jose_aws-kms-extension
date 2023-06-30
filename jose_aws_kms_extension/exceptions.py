@@ -10,7 +10,7 @@ class KMSError(JOSEError):
 
 class KMSValidationError(KMSError):
     """
-    Base class KMS validations errors.
+    Base class for KMS validations errors.
     """
     pass
 
@@ -18,5 +18,12 @@ class KMSValidationError(KMSError):
 class KMSInvalidKeyFormatError(TypeError, KMSValidationError):
     """
     Exception class for invalid KMS key format.
+    """
+    pass
+
+
+class KMSTransientError(KMSError):
+    """
+    Base class for KMS transient errors.
     """
     pass

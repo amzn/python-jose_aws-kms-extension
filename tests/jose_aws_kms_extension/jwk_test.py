@@ -1,33 +1,33 @@
-from typing import Set
 from unittest import mock
 
 import pytest
+from _pytest.fixtures import FixtureRequest
 from jose.backends import DIRKey
 from jose.backends.base import Key
 from jose.constants import ALGORITHMS
 from jose.jwk import get_key, construct
 
-from jose_aws_kms_extension.backends.kms.asymmetric.signing import BotoKmsAsymmetricSigningKey
-from jose_aws_kms_extension.backends.kms.symmetric.encryption import BotoKmsSymmetricEncryptionKey
+from jose_aws_kms_extension.backends.kms.asymmetric.signing import BotoKMSAsymmetricSigningKey
+from jose_aws_kms_extension.backends.kms.symmetric.encryption import BotoKMSSymmetricEncryptionKey
 
 
-@pytest.fixture
-def valid_asymmetric_signing_algorithms() -> Set[str]:
-    return ALGORITHMS.KMS_ASYMMETRIC_SIGNING
+@pytest.fixture(params=ALGORITHMS.KMS_ASYMMETRIC_SIGNING)
+def valid_asymmetric_signing_algorithm(request: FixtureRequest) -> str:
+    return request.param
 
 
 def test_get_key__with_symmetric_default_algorithm__should_return_boto_symmetric_encryption_key() -> None:
     key_class = get_key(ALGORITHMS.SYMMETRIC_DEFAULT)
 
-    assert key_class is BotoKmsSymmetricEncryptionKey
+    assert key_class is BotoKMSSymmetricEncryptionKey
 
 
 def test_get_key__with_kms_asymmetric_signing_algorithm__should_return_boto_asymmetric_signing_key(
-    valid_asymmetric_signing_algorithms: Set[str]
+    valid_asymmetric_signing_algorithm: str
 ) -> None:
-    for algorithm in valid_asymmetric_signing_algorithms:
-        key_class = get_key(algorithm)
-        assert key_class is BotoKmsAsymmetricSigningKey
+    key_class = get_key(valid_asymmetric_signing_algorithm)
+
+    assert key_class is BotoKMSAsymmetricSigningKey
 
 
 @mock.patch('jose_aws_kms_extension.jwk.jose_jwk_get_key')

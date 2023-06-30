@@ -8,8 +8,8 @@ from jose.jwk import (
     construct as jose_jwk_construct,
 )
 
-from jose_aws_kms_extension.backends.kms.asymmetric.signing import BotoKmsAsymmetricSigningKey
-from jose_aws_kms_extension.backends.kms.symmetric.encryption import BotoKmsSymmetricEncryptionKey
+from jose_aws_kms_extension.backends.kms.asymmetric.signing import BotoKMSAsymmetricSigningKey
+from jose_aws_kms_extension.backends.kms.symmetric.encryption import BotoKMSSymmetricEncryptionKey
 
 
 def _get_key(algorithm: str) -> Optional[Type[Key]]:
@@ -20,9 +20,9 @@ def _get_key(algorithm: str) -> Optional[Type[Key]]:
     """
 
     if algorithm in ALGORITHMS.KMS_ASYMMETRIC_SIGNING:
-        return BotoKmsAsymmetricSigningKey
+        return BotoKMSAsymmetricSigningKey
     elif algorithm == ALGORITHMS.SYMMETRIC_DEFAULT:
-        return BotoKmsSymmetricEncryptionKey
+        return BotoKMSSymmetricEncryptionKey
     else:
         return jose_jwk_get_key(algorithm)
 

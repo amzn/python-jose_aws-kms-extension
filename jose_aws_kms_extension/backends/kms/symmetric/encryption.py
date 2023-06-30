@@ -5,10 +5,12 @@ from typing import Tuple, Mapping, Optional, Sequence
 import boto3
 from jose.backends.base import Key
 from jose.constants import ALGORITHMS
-from jose.exceptions import JWEError, JWEAlgorithmUnsupportedError
+from jose.exceptions import JWEAlgorithmUnsupportedError
 from mypy_boto3_kms.client import KMSClient
 from mypy_boto3_kms.literals import DataKeySpecType
 
+from jose_aws_kms_extension import exceptions
+from jose_aws_kms_extension.backends.kms import constants as kms_be_consts
 from jose_aws_kms_extension.backends.kms import utils
 
 _DATA_KEY_SPECS = SimpleNamespace(
@@ -25,7 +27,7 @@ _ENCRYPTION_METHOD_TO_KEY_SPEC_DICT = {
 }
 
 
-class KmsSymmetricEncryptionKey(abc.ABC, Key):
+class KMSSymmetricEncryptionKey(abc.ABC, Key):
     """
     Abstract class representing AWS KMS Symmetric Key.
     Ref: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#symmetric-cmks
@@ -48,6 +50,9 @@ class KmsSymmetricEncryptionKey(abc.ABC, Key):
         :param encryption_context: A collection of non-secret key-value pairs that represent additional authenticated
             data.
         :param grant_tokens: A unique, nonsecret, variable-length, base64-encoded string that represents a grant.
+
+        :raises jose.exceptions.JWEAlgorithmUnsupportedError: If an unsupported algorithm is passes in the input.
+        :raise KMSInvalidKeyFormatError: If the key format doesn't match to a KMS specific key format.
         """
         if algorithm not in ALGORITHMS.KMS_SYMMETRIC_ENCRYPTION:
             raise JWEAlgorithmUnsupportedError(
@@ -72,7 +77,7 @@ class KmsSymmetricEncryptionKey(abc.ABC, Key):
         ...
 
 
-class BotoKmsSymmetricEncryptionKey(KmsSymmetricEncryptionKey):
+class BotoKMSSymmetricEncryptionKey(KMSSymmetricEncryptionKey):
     """
     Class representing an AWS KMS Symmetric key.
     It implements limited methods needed for `Key` operations. We can implement more methods, when we need them.
@@ -89,6 +94,7 @@ class BotoKmsSymmetricEncryptionKey(KmsSymmetricEncryptionKey):
     ):
         """
         See :func:`~jose_aws_kms_extension.backends.kms.KmsSymmetricEncryptionKey.__init__`.
+
         :param kms_client: Boto KMS client to be used for all operations with the key.
         """
         super().__init__(key=key, algorithm=algorithm, encryption_context=encryption_context, grant_tokens=grant_tokens)
@@ -97,40 +103,44 @@ class BotoKmsSymmetricEncryptionKey(KmsSymmetricEncryptionKey):
     def generate_data_key(self, enc: str) -> Tuple[bytes, bytes]:
         """
         See :func:`~jose_aws_kms_extension.backends.kms.KmsSymmetricEncryptionKey.generate_data_key`.
+
+        :raises jose_aws_kms_extension.exceptions.KMSValidationError: If validation exception is thrown from KMS.
+        :raises jose_aws_kms_extension.exceptions.KMSTransientError: If transient exception is thrown from KMS.
         """
 
         key_spec = self._get_key_spec(enc)
-
-        try:
+        with utils.default_kms_exception_handing(self._kms_client):
             data_key_response = self._kms_client.generate_data_key(
                 KeyId=self._key,
                 KeySpec=key_spec,
                 EncryptionContext=self._encryption_context,
                 GrantTokens=self._grant_tokens,
             )
-        except Exception as exc:
-            # TODO: Do granular exception handling, when granular JWE exceptions are added.
-            raise JWEError("Exception was thrown while generating data-key.") from exc
-        else:
             return data_key_response["Plaintext"], data_key_response["CiphertextBlob"]
 
     def unwrap_key(self, wrapped_key: bytes) -> bytes:
         """
         See :func:`~jose.backends.base.Key.unwrap_key`.
+
+        :raises jose_aws_kms_extension.exceptions.KMSValidationError: If validation exception is thrown from KMS.
+        :raises jose_aws_kms_extension.exceptions.KMSTransientError: If transient exception is thrown from KMS.
         """
-        try:
-            decryption_response = self._kms_client.decrypt(
-                CiphertextBlob=wrapped_key,
-                KeyId=self._key,
-                EncryptionAlgorithm=self._algorithm,  # type: ignore[arg-type]
-                EncryptionContext=self._encryption_context,
-                GrantTokens=self._grant_tokens,
-            )
-        except Exception as exc:
-            # TODO: Do granular exception handling, when granular JWE exceptions are added.
-            raise JWEError('Exception was thrown while decryption.') from exc
-        else:
-            return decryption_response['Plaintext']
+        with utils.default_kms_exception_handing(self._kms_client):
+            try:
+                decryption_response = self._kms_client.decrypt(
+                    CiphertextBlob=wrapped_key,
+                    KeyId=self._key,
+                    EncryptionAlgorithm=self._algorithm,  # type: ignore[arg-type]
+                    EncryptionContext=self._encryption_context,
+                    GrantTokens=self._grant_tokens,
+                )
+            except (
+                self._kms_client.exceptions.InvalidCiphertextException,
+                self._kms_client.exceptions.IncorrectKeyException,
+            ) as exc:
+                raise exceptions.KMSValidationError(kms_be_consts.DEFAULT_KMS_VALIDATION_ERROR_MESSAGE) from exc
+            else:
+                return decryption_response['Plaintext']
 
     @staticmethod
     def _get_key_spec(enc: str) -> DataKeySpecType:

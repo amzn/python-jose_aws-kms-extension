@@ -9,12 +9,16 @@ __pycache__/
 *$py.class
 *.egg-info/
 
-/.coverage
+**/.coverage
 /.coverage.*
 /.cache
-/.pytest_cache
+**/.pytest_cache
 /.mypy_cache
 
 /doc/_apidoc/
 /build
 /dist
+
+# Unit test / coverage reports
+htmlcov/
+coverage.xml

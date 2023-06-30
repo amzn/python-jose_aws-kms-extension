@@ -4,7 +4,7 @@ from jose.backends.base import Key
 from jose.jwe import _get_key_wrap_cek as jose_jwe_get_key_wrap_cek
 from jose import jwe as jose_jwe
 
-from jose_aws_kms_extension.backends.kms.symmetric.encryption import KmsSymmetricEncryptionKey
+from jose_aws_kms_extension.backends.kms.symmetric.encryption import KMSSymmetricEncryptionKey
 
 
 def _get_key_wrap_cek(enc: str, key: Key) -> Tuple[bytes, bytes]:
@@ -15,7 +15,7 @@ def _get_key_wrap_cek(enc: str, key: Key) -> Tuple[bytes, bytes]:
     :return: Tuple of CEK bytes and wrapped/encrypted CEK bytes.
     """
 
-    if isinstance(key, KmsSymmetricEncryptionKey):
+    if isinstance(key, KMSSymmetricEncryptionKey):
         return key.generate_data_key(enc=enc)
     else:
         return jose_jwe_get_key_wrap_cek(enc=enc, key=key)

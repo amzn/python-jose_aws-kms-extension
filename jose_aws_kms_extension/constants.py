@@ -32,6 +32,8 @@ class Algorithms(jose_constants.Algorithms):
         ECDSA_SHA_512
     }
 
+    # TODO: This dict is currently replacing the dict with same name defined in the parent class.
+    #  Either rename it or extend the dict defined in the parent class avoid replacement.
     HASHES: Dict[str, Callable] = {
         RSASSA_PKCS1_V1_5_SHA_256: hashlib.sha256,
         RSASSA_PKCS1_V1_5_SHA_384: hashlib.sha384,

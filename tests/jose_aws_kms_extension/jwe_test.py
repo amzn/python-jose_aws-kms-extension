@@ -6,7 +6,7 @@ from jose.backends.base import Key
 from jose.constants import ALGORITHMS
 from jose.jwe import _get_key_wrap_cek
 
-from jose_aws_kms_extension.backends.kms.symmetric.encryption import KmsSymmetricEncryptionKey
+from jose_aws_kms_extension.backends.kms.symmetric.encryption import KMSSymmetricEncryptionKey
 
 
 @pytest.fixture
@@ -16,7 +16,7 @@ def enc() -> str:
 
 @pytest.fixture
 def mock_kms_symmetric_encryption_key() -> mock.MagicMock:
-    return mock.MagicMock(spec=KmsSymmetricEncryptionKey)
+    return mock.MagicMock(spec=KMSSymmetricEncryptionKey)
 
 
 @pytest.fixture
