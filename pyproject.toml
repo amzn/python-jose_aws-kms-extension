@@ -100,10 +100,17 @@ python_files = [
 ]
 
 [tool.poe.tasks]
+env38 = "poetry env use 3.8"
 lock = "poetry lock"
 install = "poetry install"
 build = "poetry build"
 type-check = "poetry run mypy ."
 style-check = "poetry run pflake8"
 test = "poetry run pytest"
-release = ["lock", "install", "type-check", "style-check", "test", "build"]
+
+# Release command with Python verison 3.8.
+release = ["env38", "lock", "install", "type-check", "style-check", "test", "build"]
+
+# Release command with no Python version enforcment.
+# The 'env-' preffix suggests that you can use your own Python env for the release.
+env-release = ["lock", "install", "type-check", "style-check", "test", "build"]

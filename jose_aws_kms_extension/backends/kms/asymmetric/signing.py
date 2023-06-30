@@ -1,4 +1,5 @@
 import abc
+import hashlib
 from types import SimpleNamespace
 from typing import Callable, Optional, Sequence
 
@@ -25,6 +26,7 @@ class KMSAsymmetricSigningKey(abc.ABC, Key):
 
     _key: str
     _algorithm: str
+    _hash_provider: Callable[[bytes], 'hashlib._Hash']
     _grant_tokens: Sequence[str]
 
     def __init__(
@@ -38,7 +40,7 @@ class KMSAsymmetricSigningKey(abc.ABC, Key):
         :param algorithm: Signing algorithm to be used with the key.
         :param grant_tokens: A unique, nonsecret, variable-length, base64-encoded string that represents a grant.
 
-        :raises jose.exceptions.JWEAlgorithmUnsupportedError: If and unsupported algorithm is passes in the input.
+        :raises jose.exceptions.JWSAlgorithmError: If an unsupported algorithm is passes in the input.
         :raise KMSInvalidKeyFormatError: If the key format doesn't match to a KMS specific key format.
         """
         if algorithm not in ALGORITHMS.KMS_ASYMMETRIC_SIGNING:
@@ -46,11 +48,24 @@ class KMSAsymmetricSigningKey(abc.ABC, Key):
                 f"{algorithm} is not part of supported KMS asymmetric algorithms: {ALGORITHMS.KMS_ASYMMETRIC_SIGNING}"
             )
         utils.validate_key_format(key)
+        self._hash_provider = self._get_hash_provider(algorithm)
 
         super().__init__(key=key, algorithm=algorithm)
         self._key = key
         self._algorithm = algorithm
         self._grant_tokens = grant_tokens or []
+
+    @staticmethod
+    def _get_hash_provider(signing_algorithm: str) -> Callable[[bytes], 'hashlib._Hash']:
+        """
+        This method returns a callable message hash-provider for the given signing-algorithm.
+        """
+        try:
+            return ALGORITHMS.HASHES[signing_algorithm]
+        except KeyError as exc:
+            raise JWSAlgorithmError(
+                f"Unable to find a hashing algorithm for the provided signing algorithm: {signing_algorithm}."
+            ) from exc
 
 
 class BotoKMSAsymmetricSigningKey(KMSAsymmetricSigningKey):
@@ -85,11 +100,10 @@ class BotoKMSAsymmetricSigningKey(KMSAsymmetricSigningKey):
         :raises jose_aws_kms_extension.exceptions.KMSTransientError: If transient exception is thrown from KMS.
         """
 
-        message = self._get_message(msg)
         with utils.default_kms_exception_handing(self._kms_client):
             res: SignResponseTypeDef = self._kms_client.sign(
                 KeyId=self._key,
-                Message=message,
+                Message=self._hash_provider(msg).digest(),
                 MessageType=_MESSAGE_TYPE.DIGEST,
                 SigningAlgorithm=self._algorithm,  # type: ignore[arg-type]
                 GrantTokens=self._grant_tokens,
@@ -104,12 +118,11 @@ class BotoKMSAsymmetricSigningKey(KMSAsymmetricSigningKey):
         :raises jose_aws_kms_extension.exceptions.KMSTransientError: If transient exception is thrown from KMS.
         """
 
-        message = self._get_message(msg)
         with utils.default_kms_exception_handing(self._kms_client):
             try:
                 verify_result: VerifyResponseTypeDef = self._kms_client.verify(
                     KeyId=self._key,
-                    Message=message,
+                    Message=self._hash_provider(msg).digest(),
                     MessageType=_MESSAGE_TYPE.DIGEST,
                     Signature=sig,
                     SigningAlgorithm=self._algorithm,  # type: ignore[arg-type]
@@ -118,11 +131,3 @@ class BotoKMSAsymmetricSigningKey(KMSAsymmetricSigningKey):
                 return False
             else:
                 return verify_result["SignatureValid"]
-
-    def _get_message(self, msg: bytes) -> bytes:
-        try:
-            # TODO: Make this call in __init__, when setting the algorithm.
-            message_digest_provider: Callable = ALGORITHMS.HASHES[self._algorithm]
-        except KeyError:
-            raise JWSAlgorithmError(f"Provided algorithm: {self._algorithm}, doesn't support message digesting.")
-        return message_digest_provider(msg).digest()

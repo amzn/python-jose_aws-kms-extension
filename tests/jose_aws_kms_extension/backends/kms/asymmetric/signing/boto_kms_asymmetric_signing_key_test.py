@@ -1,4 +1,5 @@
 from typing import Dict, Type
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
@@ -76,16 +77,19 @@ def test_construct__valid_arguments__should_call_validate_key_format(
     mock_validate_key_format.assert_called_once_with(valid_key)
 
 
-def test_sign__with_unsupported_hashing_algorithm__should_throw_error(
-    boto_kms_asymmetric_signing_key: BotoKMSAsymmetricSigningKey,
-    msg: bytes
+@mock.patch('jose_aws_kms_extension.backends.kms.asymmetric.signing.ALGORITHMS.KMS_ASYMMETRIC_SIGNING')
+def test_construct__with_unsupported_hashing_algorithm__should_throw_error(
+    mock_kms_asymmetric_signing: MagicMock, valid_key: str, unsupported_algorithm: str, mock_kms_client: MagicMock
 ) -> None:
-    boto_kms_asymmetric_signing_key.__setattr__("_algorithm", unsupported_algorithm)
+    mock_kms_asymmetric_signing.__contains__ = lambda *args, **kwargs: True
+
     with pytest.raises(
         JWSAlgorithmError,
-        match=f"Provided algorithm: {unsupported_algorithm}, doesn't support message digesting."
-    ):
-        boto_kms_asymmetric_signing_key.sign(msg)
+        match=f"Unable to find a hashing algorithm for the provided signing algorithm: {unsupported_algorithm}."
+    ) as exc_info:
+        BotoKMSAsymmetricSigningKey(key=valid_key, algorithm=unsupported_algorithm, kms_client=mock_kms_client)
+
+    assert isinstance(exc_info.value.__cause__, KeyError)
 
 
 @pytest.mark.parametrize(
@@ -118,18 +122,6 @@ def test_sign__with_response_from_kms__should_return_signature(
     signature = boto_kms_asymmetric_signing_key.sign(msg)
 
     assert signature is mock_kms_client.sign.return_value["Signature"]
-
-
-def test_verify__with_unsupported_hashing_algorithm__should_throw_error(
-    boto_kms_asymmetric_signing_key: BotoKMSAsymmetricSigningKey,
-    msg: bytes, sig: bytes
-) -> None:
-    boto_kms_asymmetric_signing_key.__setattr__("_algorithm", unsupported_algorithm)
-    with pytest.raises(
-        JWSAlgorithmError,
-        match=f"Provided algorithm: {unsupported_algorithm}, doesn't support message digesting."
-    ):
-        boto_kms_asymmetric_signing_key.verify(msg, sig)
 
 
 @pytest.mark.parametrize(

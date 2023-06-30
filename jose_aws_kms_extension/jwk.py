@@ -1,4 +1,4 @@
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, Dict
 
 from jose import jwk as jose_jwk
 from jose.backends.base import Key
@@ -27,7 +27,7 @@ def _get_key(algorithm: str) -> Optional[Type[Key]]:
         return jose_jwk_get_key(algorithm)
 
 
-def _construct(key_data: Union[str, dict, Key], algorithm: Optional[str] = None) -> Key:
+def _construct(key_data: Union[str, Dict[str, str], Key], algorithm: Optional[str] = None) -> Key:
     """
     Override of :func:`~jose.jwk.construct` method, to allow passing an externally constructed object of
     :class:`~jose.backends.base.Key`.
