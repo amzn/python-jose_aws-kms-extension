@@ -85,6 +85,9 @@ fail_under = 100
 [tool.coverage.run]
 branch = true
 parallel = true
+omit = [
+    "*_tmp.py",
+]
 
 [tool.pytest.ini_options]
 addopts = [

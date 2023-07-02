@@ -81,6 +81,22 @@ b'<compact serialized JWE token>'
 'Hello, World!'
 ```
 
+#### Encrypt with Addition Headers
+[JWS](https://datatracker.ietf.org/doc/html/rfc7515) and [JWE](https://datatracker.ietf.org/doc/html/rfc7516), 
+both specs have the provision of custom (i.e. user-defined) headers. *python-jose* supports passing custom headers 
+in the `headers` parameter in `jose.jws.sign()` method. But the same is not supported in `jose.jwe.encrypt()` method. 
+We have opened the [issue 321](https://github.com/mpdavis/python-jose/issues/321) to add this support. 
+But until the issue is resolved, we have added this capability via this library. 
+
+Following example shows how custom headers can be passed in `jose.jwe.ecrypt()` function.
+```python
+>>> import jose_aws_kms_extension
+>>> from jose import jwe
+
+>>> jwe.encrypt(plaintext='Hello, World!', key='<your KMS key string>', algorithm='SYMMETRIC_DEFAULT', encryption='A128GCM', kid='<your KMS key string>', additional_headers={'addition-header1': 'val1', 'additional-header2': 'val2'})
+b'<compact serialized JWE token>'
+```
+
 ### Sign/Verify
 #### Sign/Verify with a String Key
 ```python
