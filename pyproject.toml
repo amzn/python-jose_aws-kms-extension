@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "python-jose_aws-kms-extension"
-version = "1.0.0"
+version = "1.0.1"
 description = "AWS KMS extension for 'python-jose' library."
 
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ authors = [
     "Lynx Tech <lynx-tech@amazon.com>",
 ]
 
-readme = ["README.md", "LICENSE"]
+readme = ["README.md"]
 
 packages = [{include = "jose_aws_kms_extension"}]
 
