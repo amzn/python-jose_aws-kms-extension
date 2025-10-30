@@ -1,5 +1,10 @@
 # python-jose_aws-kms-extension
 
+> [!WARNING]
+> ## Deprecation Warning 
+> This package have been deprecated and is not under active maintenance anymore. It is NOT receiving any security updates.
+
+
 This library is an **extension of [python-jose](https://pypi.org/project/python-jose/) library**.
 It uses [monkey-patching](https://en.wikipedia.org/wiki/Monkey_patch) to extend the capabilities of *python-jose*.
 It provides JWE based encrypters/decrypters and JWS based signers/verifiers for doing operations with cryptographic
